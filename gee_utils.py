@@ -3,41 +3,50 @@ import pandas as pd
 import numpy as np
 
 
-def init_gee():
-    import json, os, tempfile
+def _get_key_dict():
+    import os, json
 
-    key_dict = None
-
-    # 1. Try Streamlit secrets (only on Streamlit Cloud)
+    # 1. Streamlit secrets
     try:
         import streamlit as st
         if "gee_key" in st.secrets:
-            key_dict = dict(st.secrets["gee_key"])
-            # Streamlit TOML escapes \n as literal \\n — fix it
-            if "private_key" in key_dict:
-                key_dict["private_key"] = key_dict["private_key"].replace("\\n", "\n")
+            raw = dict(st.secrets["gee_key"])
+            pk  = raw.get("private_key", "")
+            # Fix double-escaped newlines that TOML sometimes produces
+            raw["private_key"] = pk.replace("\\n", "\n")
+            return raw
     except Exception:
         pass
 
-    # 2. Always prefer the local gee-key.json if it exists (most reliable)
+    # 2. Local file
     key_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gee-key.json")
     if os.path.exists(key_path):
         with open(key_path) as f:
-            key_dict = json.load(f)
+            return json.load(f)
 
-    if key_dict is None:
-        raise FileNotFoundError(
-            "No GEE credentials found. Place gee-key.json next to gee_utils.py."
-        )
+    raise FileNotFoundError("No GEE credentials found.")
 
-    project_id            = key_dict["project_id"]
-    service_account_email = key_dict["client_email"]
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-        json.dump(key_dict, tmp)
-        tmp_path = tmp.name
+def init_gee():
+    import tempfile, json
+    from google.oauth2 import service_account
+    from google.auth.transport.requests import Request
 
-    credentials = ee.ServiceAccountCredentials(service_account_email, tmp_path)
+    key_dict   = _get_key_dict()
+    project_id = key_dict["project_id"]
+
+    scopes = [
+        "https://www.googleapis.com/auth/earthengine",
+        "https://www.googleapis.com/auth/cloud-platform",
+    ]
+
+    credentials = service_account.Credentials.from_service_account_info(
+        key_dict, scopes=scopes
+    )
+
+    # Eagerly refresh so any auth error surfaces here with a clear message
+    credentials.refresh(Request())
+
     ee.Initialize(credentials, project=project_id)
 
 
