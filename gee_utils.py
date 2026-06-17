@@ -9,33 +9,31 @@ def _get_key_dict():
     # 1. Streamlit secrets
     try:
         import streamlit as st
-        if "gee_key" in st.secrets and "raw_private_key" in st.secrets["gee_key"]:
-            # Hardcode your public infrastructure identifiers safely
-            # and pull ONLY the problematic private key string dynamically.
-            return {
-                "type": "service_account",
-                "project_id": "rare-keep-398305",
-                "private_key_id": "af36561160d452f18bbb8b99fd216c71d29c6460",
-                "client_email": "chinmay-mulik@rare-keep-398305.iam.gserviceaccount.com",
-                "client_id": "107141096011956487182",
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/chinmay-mulik%40rare-keep-398305.iam.gserviceaccount.com",
-                "universe_domain": "googleapis.com",
-                "private_key": st.secrets["gee_key"]["raw_private_key"]
-            }
+        if "gee_key" in st.secrets:
+            # Cast Streamlit Secrets object to a standard modifiable dictionary
+            raw = dict(st.secrets["gee_key"])
+            pk  = raw.get("private_key", "")
+            
+            # Formulating a bulletproof sanitization script for the cryptography parser:
+            # 1. Strip accidental edge spacing or trailing tabs
+            pk = pk.strip()
+            # 2. Re-evaluate any explicitly typed literal '\n' characters into genuine breaks
+            pk = pk.replace("\\n", "\n")
+            # 3. Standardize alternate system carriage returns (\r\n) to simple Unix breaks (\n)
+            pk = pk.replace("\r\n", "\n")
+            
+            raw["private_key"] = pk
+            return raw
     except Exception:
         pass
 
-    # 2. Local file
+    # 2. Local fallback file
     key_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gee-key.json")
     if os.path.exists(key_path):
         with open(key_path) as f:
             return json.load(f)
 
     raise FileNotFoundError("No GEE credentials found.")
-
 
 def init_gee():
     import tempfile, json
