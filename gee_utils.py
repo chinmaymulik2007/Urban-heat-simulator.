@@ -9,16 +9,22 @@ def _get_key_dict():
     # 1. Streamlit secrets
     try:
         import streamlit as st
-        if "gee_key" in st.secrets:
-            # Check if we packed it into our single JSON string
-            if "json_string" in st.secrets["gee_key"]:
-                return json.loads(st.secrets["gee_key"]["json_string"])
-            
-            # Fallback parsing for legacy format
-            raw = dict(st.secrets["gee_key"])
-            pk  = raw.get("private_key", "")
-            raw["private_key"] = pk.strip().replace("\\n", "\n").replace("\r", "")
-            return raw
+        if "gee_key" in st.secrets and "raw_private_key" in st.secrets["gee_key"]:
+            # Hardcode your public infrastructure identifiers safely
+            # and pull ONLY the problematic private key string dynamically.
+            return {
+                "type": "service_account",
+                "project_id": "rare-keep-398305",
+                "private_key_id": "af36561160d452f18bbb8b99fd216c71d29c6460",
+                "client_email": "chinmay-mulik@rare-keep-398305.iam.gserviceaccount.com",
+                "client_id": "107141096011956487182",
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/chinmay-mulik%40rare-keep-398305.iam.gserviceaccount.com",
+                "universe_domain": "googleapis.com",
+                "private_key": st.secrets["gee_key"]["raw_private_key"]
+            }
     except Exception:
         pass
 
