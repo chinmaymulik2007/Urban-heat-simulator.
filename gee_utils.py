@@ -2,7 +2,6 @@ import ee
 import pandas as pd
 import numpy as np
 
-
 def _get_key_dict():
     import os, json
 
@@ -10,19 +9,14 @@ def _get_key_dict():
     try:
         import streamlit as st
         if "gee_key" in st.secrets:
-            # Cast Streamlit Secrets object to a standard modifiable dictionary
+            # If the single JSON document variable exists, unpack it instantly
+            if "json_string" in st.secrets["gee_key"]:
+                return json.loads(st.secrets["gee_key"]["json_string"])
+            
+            # Legacy fallback code block
             raw = dict(st.secrets["gee_key"])
             pk  = raw.get("private_key", "")
-            
-            # Formulating a bulletproof sanitization script for the cryptography parser:
-            # 1. Strip accidental edge spacing or trailing tabs
-            pk = pk.strip()
-            # 2. Re-evaluate any explicitly typed literal '\n' characters into genuine breaks
-            pk = pk.replace("\\n", "\n")
-            # 3. Standardize alternate system carriage returns (\r\n) to simple Unix breaks (\n)
-            pk = pk.replace("\r\n", "\n")
-            
-            raw["private_key"] = pk
+            raw["private_key"] = pk.replace("\\n", "\n")
             return raw
     except Exception:
         pass
@@ -34,6 +28,7 @@ def _get_key_dict():
             return json.load(f)
 
     raise FileNotFoundError("No GEE credentials found.")
+
 
 def init_gee():
     import tempfile, json
