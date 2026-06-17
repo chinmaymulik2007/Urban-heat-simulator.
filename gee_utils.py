@@ -4,34 +4,27 @@ import numpy as np
 
 def _get_key_dict():
     import os, json
-    import streamlit as st
 
-    # 1. Try Streamlit Secrets
-    if "gee_key" in st.secrets:
-        secret_content = st.secrets["gee_key"]
-        
-        # Track B Handling: If you pasted it as a single 'json_string'
-        if isinstance(secret_content, dict) and "json_string" in secret_content:
-            return json.loads(secret_content["json_string"])
-        
-        # Track A Handling: If you pasted individual TOML keys
-        try:
-            raw = dict(secret_content)
+    # 1. Streamlit secrets
+    try:
+        import streamlit as st
+        if "gee_key" in st.secrets:
+            raw = dict(st.secrets["gee_key"])
             pk = raw.get("private_key", "")
-            # Deep cleaning whitespace and line endings
-            pk = pk.strip().replace("\\n", "\n").replace("\r\n", "\n")
-            raw["private_key"] = pk
+            
+            # Clean up leading/trailing spacing and handle line endings uniformly
+            raw["private_key"] = pk.strip().replace("\r\n", "\n")
             return raw
-        except Exception as e:
-            st.warning(f"Streamlit secrets found but failed to parse: {e}")
+    except Exception:
+        pass
 
-    # 2. Local Fallback File
+    # 2. Local file fallback
     key_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gee-key.json")
     if os.path.exists(key_path):
         with open(key_path) as f:
             return json.load(f)
 
-    raise FileNotFoundError("No GEE credentials found or secrets invalid.")
+    raise FileNotFoundError("No GEE credentials found.")
 
 def init_gee():
     import tempfile, json
