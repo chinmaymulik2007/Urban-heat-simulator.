@@ -10,18 +10,14 @@ def _get_key_dict():
     try:
         import streamlit as st
         if "gee_key" in st.secrets:
+            # Check if we packed it into our single JSON string
+            if "json_string" in st.secrets["gee_key"]:
+                return json.loads(st.secrets["gee_key"]["json_string"])
+            
+            # Fallback parsing
             raw = dict(st.secrets["gee_key"])
             pk  = raw.get("private_key", "")
-            
-            # --- FIX STARTS HERE ---
-            # 1. Handle literal backslashes if present
-            pk = pk.replace("\\n", "\n")
-            # 2. Normalize standard windows/unix line endings
-            pk = pk.replace("\r\n", "\n")
-            
-            raw["private_key"] = pk
-            # --- FIX ENDS HERE ---
-            
+            raw["private_key"] = pk.strip().replace("\\n", "\n").replace("\r", "")
             return raw
     except Exception:
         pass
