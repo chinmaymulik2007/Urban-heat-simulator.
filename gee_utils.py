@@ -3,36 +3,30 @@ import pandas as pd
 import numpy as np
 
 def _get_key_dict():
-    import os, json
+    import os, json, base64
 
-    # 1. Streamlit secrets
+    # 1. Streamlit secrets handling
     try:
         import streamlit as st
-        if "gee_key" in st.secrets:
-            raw = dict(st.secrets["gee_key"])
+        if "gee_key" in st.secrets and "base64_data" in st.secrets["gee_key"]:
+            # Retrieve the flat, safe Base64 string from Streamlit configuration
+            b64_str = st.secrets["gee_key"]["base64_data"]
             
-            # Reconstruct the private key string directly from the clean array lines
-            if "private_key_lines" in raw:
-                raw["private_key"] = "\n".join(raw["private_key_lines"]) + "\n"
-                # Clear out the temporary array before returning
-                del raw["private_key_lines"]
-                return raw
-                
-            # Fallback legacy parsing if needed
-            pk = raw.get("private_key", "")
-            raw["private_key"] = pk.strip().replace("\\n", "\n").replace("\r\n", "\n")
-            return raw
+            # Decode the base64 structure directly into raw JSON bytes
+            json_bytes = base64.b64decode(b64_str)
+            
+            # Unpack the bytes layout into a native python dictionary object
+            return json.loads(json_bytes)
     except Exception:
         pass
 
-    # 2. Local fallback file
+    # 2. Local fallback file processing (Development environments)
     key_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gee-key.json")
     if os.path.exists(key_path):
         with open(key_path) as f:
             return json.load(f)
 
-    raise FileNotFoundError("No GEE credentials found.")
-
+    raise FileNotFoundError("No valid GEE credentials found or secrets configuration missing.")
 def init_gee():
     import tempfile, json
     from google.oauth2 import service_account
