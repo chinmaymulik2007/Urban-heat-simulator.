@@ -10,15 +10,22 @@ def _get_key_dict():
         import streamlit as st
         if "gee_key" in st.secrets:
             raw = dict(st.secrets["gee_key"])
-            pk = raw.get("private_key", "")
             
-            # Clean up leading/trailing spacing and handle line endings uniformly
-            raw["private_key"] = pk.strip().replace("\r\n", "\n")
+            # Reconstruct the private key string directly from the clean array lines
+            if "private_key_lines" in raw:
+                raw["private_key"] = "\n".join(raw["private_key_lines"]) + "\n"
+                # Clear out the temporary array before returning
+                del raw["private_key_lines"]
+                return raw
+                
+            # Fallback legacy parsing if needed
+            pk = raw.get("private_key", "")
+            raw["private_key"] = pk.strip().replace("\\n", "\n").replace("\r\n", "\n")
             return raw
     except Exception:
         pass
 
-    # 2. Local file fallback
+    # 2. Local fallback file
     key_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gee-key.json")
     if os.path.exists(key_path):
         with open(key_path) as f:
