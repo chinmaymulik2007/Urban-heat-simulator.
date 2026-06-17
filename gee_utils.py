@@ -4,31 +4,34 @@ import numpy as np
 
 def _get_key_dict():
     import os, json
+    import streamlit as st
 
-    # 1. Streamlit secrets
-    try:
-        import streamlit as st
-        if "gee_key" in st.secrets:
-            # If the single JSON document variable exists, unpack it instantly
-            if "json_string" in st.secrets["gee_key"]:
-                return json.loads(st.secrets["gee_key"]["json_string"])
-            
-            # Legacy fallback code block
-            raw = dict(st.secrets["gee_key"])
-            pk  = raw.get("private_key", "")
-            raw["private_key"] = pk.replace("\\n", "\n")
+    # 1. Try Streamlit Secrets
+    if "gee_key" in st.secrets:
+        secret_content = st.secrets["gee_key"]
+        
+        # Track B Handling: If you pasted it as a single 'json_string'
+        if isinstance(secret_content, dict) and "json_string" in secret_content:
+            return json.loads(secret_content["json_string"])
+        
+        # Track A Handling: If you pasted individual TOML keys
+        try:
+            raw = dict(secret_content)
+            pk = raw.get("private_key", "")
+            # Deep cleaning whitespace and line endings
+            pk = pk.strip().replace("\\n", "\n").replace("\r\n", "\n")
+            raw["private_key"] = pk
             return raw
-    except Exception:
-        pass
+        except Exception as e:
+            st.warning(f"Streamlit secrets found but failed to parse: {e}")
 
-    # 2. Local fallback file
+    # 2. Local Fallback File
     key_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gee-key.json")
     if os.path.exists(key_path):
         with open(key_path) as f:
             return json.load(f)
 
-    raise FileNotFoundError("No GEE credentials found.")
-
+    raise FileNotFoundError("No GEE credentials found or secrets invalid.")
 
 def init_gee():
     import tempfile, json
