@@ -12,8 +12,16 @@ def _get_key_dict():
         if "gee_key" in st.secrets:
             raw = dict(st.secrets["gee_key"])
             pk  = raw.get("private_key", "")
-            # Fix double-escaped newlines that TOML sometimes produces
-            raw["private_key"] = pk.replace("\\n", "\n")
+            
+            # --- FIX STARTS HERE ---
+            # 1. Handle literal backslashes if present
+            pk = pk.replace("\\n", "\n")
+            # 2. Normalize standard windows/unix line endings
+            pk = pk.replace("\r\n", "\n")
+            
+            raw["private_key"] = pk
+            # --- FIX ENDS HERE ---
+            
             return raw
     except Exception:
         pass
