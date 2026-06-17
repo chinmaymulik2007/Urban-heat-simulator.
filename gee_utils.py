@@ -14,7 +14,7 @@ def _get_key_dict():
             if "json_string" in st.secrets["gee_key"]:
                 return json.loads(st.secrets["gee_key"]["json_string"])
             
-            # Fallback parsing
+            # Fallback parsing for legacy format
             raw = dict(st.secrets["gee_key"])
             pk  = raw.get("private_key", "")
             raw["private_key"] = pk.strip().replace("\\n", "\n").replace("\r", "")
