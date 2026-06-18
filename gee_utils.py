@@ -4,29 +4,24 @@ import numpy as np
 
 def _get_key_dict():
     import os, json, base64
+    import streamlit as st
 
-    # 1. Streamlit secrets decoding pipeline
+    # 1. ALWAYS check Streamlit Secrets first (Production)
     try:
-        import streamlit as st
         if "gee_key" in st.secrets and "base64_data" in st.secrets["gee_key"]:
-            # Pull down the flat string format safely
             b64_str = st.secrets["gee_key"]["base64_data"]
-            
-            # Decode base64 bytes structure back into character lines
             json_bytes = base64.b64decode(b64_str)
-            
-            # Decompress and convert raw data structure directly into a Python dict
             return json.loads(json_bytes)
-    except Exception:
+    except Exception as e:
         pass
 
-    # 2. Local fallback verification script
+    # 2. Local fallback (Only for local development)
     key_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gee-key.json")
     if os.path.exists(key_path):
         with open(key_path) as f:
             return json.load(f)
 
-    raise FileNotFoundError("No active GEE credentials found or secrets configuration is invalid.")
+    raise FileNotFoundError("No valid GEE credentials found.")
 
 
 def init_gee():
